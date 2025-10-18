@@ -19,6 +19,12 @@ const productSchema = new mongoose.Schema({
     type: String,
     default: 'url' // 'url' for file path or 'base64' for base64 encoded
   },
+  category: {
+    type: String,
+    required: false,
+    default: 'Uncategorized',
+    trim: true
+  },
   createdAt: {
     type: Date,
     default: Date.now

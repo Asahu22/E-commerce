@@ -81,11 +81,32 @@ app.post('/api/admin/login', (req, res) => {
   }
 });
 
-// Get all products (public)
+// Get all products (public) with pagination and category filter
 app.get('/api/products', async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    res.json(products);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const category = req.query.category;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Product.countDocuments(query);
+
+    res.json({
+      products,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalProducts: total
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching products', error: error.message });
   }
@@ -94,7 +115,7 @@ app.get('/api/products', async (req, res) => {
 // Add new product (admin only)
 app.post('/api/products', verifyAdmin, upload.single('image'), async (req, res) => {
   try {
-    const { name, price } = req.body;
+    const { name, price, category } = req.body;
 
     if (!name || !price || !req.file) {
       return res.status(400).json({ message: 'All fields are required' });
@@ -107,7 +128,8 @@ app.post('/api/products', verifyAdmin, upload.single('image'), async (req, res) 
       name,
       price: parseFloat(price),
       image: base64Image,
-      imageType: 'base64'
+      imageType: 'base64',
+      category: category || 'Uncategorized'
     });
 
     await product.save();
@@ -137,6 +159,16 @@ app.delete('/api/products/:id', verifyAdmin, async (req, res) => {
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting product', error: error.message });
+  }
+});
+
+// Get all unique categories
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categories = await Product.distinct('category');
+    res.json(categories.filter(cat => cat)); // Filter out any null/undefined
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching categories', error: error.message });
   }
 });
 

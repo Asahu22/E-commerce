@@ -375,6 +375,11 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="productCategory" placeholder="e.g., Crackers, Sparklers, etc." list="categoryList">
+                        <datalist id="categoryList"></datalist>
+                    </div>
+                    <div class="form-group">
                         <label>Product Image</label>
                         <input type="file" id="productImage" class="file-input" accept="image/*" required>
                     </div>
@@ -429,7 +434,22 @@
         function showAdminPanel() {
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
+            loadCategories();
             loadProducts();
+        }
+
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_URL}/categories`);
+                const categories = await response.json();
+
+                const categoryList = document.getElementById('categoryList');
+                categoryList.innerHTML = categories.map(cat =>
+                    `<option value="${cat}">`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
         }
 
         function logout() {
@@ -447,6 +467,7 @@
             const formData = new FormData();
             formData.append('name', document.getElementById('productName').value);
             formData.append('price', document.getElementById('productPrice').value);
+            formData.append('category', document.getElementById('productCategory').value || 'Uncategorized');
             formData.append('image', document.getElementById('productImage').files[0]);
 
             try {
@@ -479,8 +500,9 @@
         // Load Products
         async function loadProducts() {
             try {
-                const response = await fetch(`${API_URL}/products`);
-                const products = await response.json();
+                const response = await fetch(`${API_URL}/products?limit=1000`);
+                const data = await response.json();
+                const products = data.products || data;
 
                 const grid = document.getElementById('productsGrid');
                 grid.innerHTML = '';
@@ -494,6 +516,7 @@
                         <img src="${imageUrl}" alt="${product.name}">
                         <h4>${product.name}</h4>
                         <div class="price">₹${product.price.toFixed(2)}</div>
+                        <div style="color: #667eea; font-size: 12px; margin: 5px 0;">${product.category || 'Uncategorized'}</div>
                         <button class="delete-btn" onclick="deleteProduct('${product._id}')">Delete</button>
                     `;
                     grid.appendChild(card);
